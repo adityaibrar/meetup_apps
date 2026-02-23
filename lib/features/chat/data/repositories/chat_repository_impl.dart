@@ -66,4 +66,17 @@ class ChatRepositoryImpl implements ChatRepository {
       return Left(ServerFailure(e.toString().replaceAll('Exception: ', '')));
     }
   }
+
+  @override
+  Future<Either<Failure, Map<String, dynamic>>> uploadChatMedia(
+    String token,
+    String filePath,
+  ) async {
+    try {
+      final result = await remoteDataSource.uploadChatMedia(token, filePath);
+      return Right(result);
+    } catch (e) {
+      return Left(ServerFailure(e.toString().replaceAll('Exception: ', '')));
+    }
+  }
 }

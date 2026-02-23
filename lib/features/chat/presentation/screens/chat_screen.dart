@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../providers/chat_provider.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import 'package:image_picker/image_picker.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/meetup_status_widget.dart';
 
@@ -130,6 +131,79 @@ class _ChatScreenState extends State<ChatScreen> {
     if (auth.user == null) return;
     chat.sendMessage(text, auth.user!.id);
     _messageController.clear();
+  }
+
+  Future<void> _pickMedia(ImageSource source, {required bool isVideo}) async {
+    Navigator.pop(context); // clear modal
+    final picker = ImagePicker();
+    XFile? file;
+
+    if (isVideo) {
+      file = await picker.pickVideo(source: source);
+    } else {
+      file = await picker.pickImage(source: source, imageQuality: 70);
+    }
+
+    if (file != null && mounted) {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final chat = Provider.of<ChatProvider>(context, listen: false);
+      if (auth.user != null) {
+        chat.sendMediaMessage(file.path, auth.user!.id);
+      }
+    }
+  }
+
+  void _showAttachmentOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _AttachmentOption(
+                      icon: Icons.camera_alt_rounded,
+                      label: 'Kamera',
+                      color: Colors.pinkAccent,
+                      onTap: () =>
+                          _pickMedia(ImageSource.camera, isVideo: false),
+                    ),
+                    _AttachmentOption(
+                      icon: Icons.image_rounded,
+                      label: 'Galeri',
+                      color: Colors.purpleAccent,
+                      onTap: () =>
+                          _pickMedia(ImageSource.gallery, isVideo: false),
+                    ),
+                    _AttachmentOption(
+                      icon: Icons.videocam_rounded,
+                      label: 'Video',
+                      color: Colors.orangeAccent,
+                      onTap: () =>
+                          _pickMedia(ImageSource.gallery, isVideo: true),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -373,7 +447,23 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: _showAttachmentOptions,
+              child: Container(
+                padding: const EdgeInsets.all(11),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceVariant,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.attach_file_rounded,
+                  color: AppColors.textSecondary,
+                  size: 20,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
             GestureDetector(
               onTap: _sendMessage,
               child: Container(
@@ -408,5 +498,41 @@ class _ChatScreenState extends State<ChatScreen> {
       return 'Kemarin';
     }
     return '${date.day}/${date.month}/${date.year}';
+  }
+}
+
+class _AttachmentOption extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color color;
+
+  const _AttachmentOption({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 28),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: AppTextStyles.bodyMedium.copyWith(fontSize: 12)),
+        ],
+      ),
+    );
   }
 }

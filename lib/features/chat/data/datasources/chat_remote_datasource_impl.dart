@@ -33,4 +33,12 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
   Future<void> deleteChat(String token, int roomId) async {
     await apiService.deleteChat(token, roomId);
   }
+
+  @override
+  Future<Map<String, dynamic>> uploadChatMedia(
+    String token,
+    String filePath,
+  ) async {
+    return await apiService.uploadChatMedia(token, filePath);
+  }
 }

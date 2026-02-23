@@ -21,7 +21,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'meetup_chat.db');
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: (db, version) {
         return db.execute('''
           CREATE TABLE messages(
@@ -36,7 +36,10 @@ class DatabaseHelper {
             product_info TEXT,
             reply_to_id TEXT,
             reply_to_content TEXT,
-            reply_to_sender_name TEXT
+            reply_to_sender_name TEXT,
+            media_type TEXT,
+            media_url TEXT,
+            local_media_path TEXT
           )
         ''');
       },
@@ -53,6 +56,13 @@ class DatabaseHelper {
             'ALTER TABLE messages ADD COLUMN reply_to_sender_name TEXT',
           );
         }
+        if (oldVersion < 4) {
+          await db.execute('ALTER TABLE messages ADD COLUMN media_type TEXT');
+          await db.execute('ALTER TABLE messages ADD COLUMN media_url TEXT');
+          await db.execute(
+            'ALTER TABLE messages ADD COLUMN local_media_path TEXT',
+          );
+        }
       },
       onOpen: (db) async {
         await db.delete('messages', where: 'created_at IS NULL');
@@ -62,20 +72,65 @@ class DatabaseHelper {
 
   Future<void> insertMessage(ChatMessage message) async {
     final db = await database;
-    await db.insert('messages', {
-      'server_id': message.id,
-      'chat_room_id': message.chatRoomId,
-      'sender_id': message.senderId,
-      'content': message.content,
-      'is_read': message.isRead ? 1 : 0,
-      'created_at': message.timestamp.toIso8601String(),
-      'product_info': message.product != null
-          ? jsonEncode(message.product)
-          : null,
-      'reply_to_id': message.replyToId,
-      'reply_to_content': message.replyToContent,
-      'reply_to_sender_name': message.replyToSenderName,
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
+
+    // Check if message exist
+    final existingMap = await db.query(
+      'messages',
+      where: 'server_id = ?',
+      whereArgs: [message.id],
+      limit: 1,
+    );
+
+    if (existingMap.isNotEmpty) {
+      final existing = existingMap.first;
+      // Preserve media fields
+      final newMediaType = message.mediaType ?? existing['media_type'];
+      final newMediaUrl = message.mediaUrl ?? existing['media_url'];
+      final newLocalPath =
+          message.localMediaPath ?? existing['local_media_path'];
+
+      await db.update(
+        'messages',
+        {
+          'chat_room_id': message.chatRoomId,
+          'sender_id': message.senderId,
+          'content': message.content,
+          // Don't overwrite isRead if it's already read locally
+          'is_read': (existing['is_read'] == 1 || message.isRead) ? 1 : 0,
+          'product_info': message.product != null
+              ? jsonEncode(message.product)
+              : existing['product_info'],
+          'reply_to_id': message.replyToId ?? existing['reply_to_id'],
+          'reply_to_content':
+              message.replyToContent ?? existing['reply_to_content'],
+          'reply_to_sender_name':
+              message.replyToSenderName ?? existing['reply_to_sender_name'],
+          'media_type': newMediaType,
+          'media_url': newMediaUrl,
+          'local_media_path': newLocalPath,
+        },
+        where: 'server_id = ?',
+        whereArgs: [message.id],
+      );
+    } else {
+      await db.insert('messages', {
+        'server_id': message.id,
+        'chat_room_id': message.chatRoomId,
+        'sender_id': message.senderId,
+        'content': message.content,
+        'is_read': message.isRead ? 1 : 0,
+        'created_at': message.timestamp.toIso8601String(),
+        'product_info': message.product != null
+            ? jsonEncode(message.product)
+            : null,
+        'reply_to_id': message.replyToId,
+        'reply_to_content': message.replyToContent,
+        'reply_to_sender_name': message.replyToSenderName,
+        'media_type': message.mediaType,
+        'media_url': message.mediaUrl,
+        'local_media_path': message.localMediaPath,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
   }
 
   Future<List<ChatMessage>> getMessages(
@@ -110,6 +165,9 @@ class DatabaseHelper {
         replyToId: maps[i]['reply_to_id'],
         replyToContent: maps[i]['reply_to_content'],
         replyToSenderName: maps[i]['reply_to_sender_name'],
+        mediaType: maps[i]['media_type'],
+        mediaUrl: maps[i]['media_url'],
+        localMediaPath: maps[i]['local_media_path'],
       );
     });
   }
@@ -180,6 +238,9 @@ class DatabaseHelper {
       replyToId: map['reply_to_id'],
       replyToContent: map['reply_to_content'],
       replyToSenderName: map['reply_to_sender_name'],
+      mediaType: map['media_type'],
+      mediaUrl: map['media_url'],
+      localMediaPath: map['local_media_path'],
     );
   }
 }

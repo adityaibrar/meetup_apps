@@ -13,4 +13,8 @@ abstract class ChatRepository {
   );
   Future<Either<Failure, void>> toggleMeetupReady(String token, int roomId);
   Future<Either<Failure, void>> deleteChat(String token, int roomId);
+  Future<Either<Failure, Map<String, dynamic>>> uploadChatMedia(
+    String token,
+    String filePath,
+  );
 }

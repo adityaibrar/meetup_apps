@@ -124,6 +124,22 @@ class ApiService {
     if (response.statusCode != 200) throw Exception('Gagal menghapus chat');
   }
 
+  Future<Map<String, dynamic>> uploadChatMedia(
+    String token,
+    String filePath,
+  ) async {
+    var uri = Uri.parse('$baseUrl/chat/upload');
+    var request = http.MultipartRequest('POST', uri);
+    request.headers.addAll({'Authorization': 'Bearer $token'});
+    request.files.add(await http.MultipartFile.fromPath('media', filePath));
+    var response = await request.send();
+    if (response.statusCode == 200) {
+      var responseData = await response.stream.bytesToString();
+      return json.decode(responseData); // {'url': '...', 'media_type': '...'}
+    }
+    throw Exception('Gagal upload media chat');
+  }
+
   // ── User ──
   Future<Map<String, dynamic>> getUserProfile(String token, int userId) async {
     final response = await http.get(

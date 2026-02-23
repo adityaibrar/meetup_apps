@@ -13,6 +13,11 @@ class ChatMessage extends Equatable {
   final String? senderName;
   final String? senderImage;
 
+  // Media support
+  final String? mediaType;
+  final String? mediaUrl;
+  final String? localMediaPath;
+
   // Reply-to support (WhatsApp-style)
   final String? replyToId;
   final String? replyToContent;
@@ -29,6 +34,9 @@ class ChatMessage extends Equatable {
     this.product,
     this.senderName,
     this.senderImage,
+    this.mediaType,
+    this.mediaUrl,
+    this.localMediaPath,
     this.replyToId,
     this.replyToContent,
     this.replyToSenderName,
@@ -45,6 +53,9 @@ class ChatMessage extends Equatable {
     Map<String, dynamic>? product,
     String? senderName,
     String? senderImage,
+    String? mediaType,
+    String? mediaUrl,
+    String? localMediaPath,
     String? replyToId,
     String? replyToContent,
     String? replyToSenderName,
@@ -60,6 +71,9 @@ class ChatMessage extends Equatable {
       product: product ?? this.product,
       senderName: senderName ?? this.senderName,
       senderImage: senderImage ?? this.senderImage,
+      mediaType: mediaType ?? this.mediaType,
+      mediaUrl: mediaUrl ?? this.mediaUrl,
+      localMediaPath: localMediaPath ?? this.localMediaPath,
       replyToId: replyToId ?? this.replyToId,
       replyToContent: replyToContent ?? this.replyToContent,
       replyToSenderName: replyToSenderName ?? this.replyToSenderName,
@@ -78,6 +92,9 @@ class ChatMessage extends Equatable {
     product,
     senderName,
     senderImage,
+    mediaType,
+    mediaUrl,
+    localMediaPath,
     replyToId,
     replyToContent,
     replyToSenderName,

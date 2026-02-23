@@ -16,7 +16,7 @@ dependencies:
   provider: ^6.1.5+1
   intl: ^0.20.2
   google_fonts: ^7.1.0
-  image_picker: ^1.0.7
+  image_picker: ^1.2.1
   sqflite: ^2.3.0
   path: ^1.8.3
   fast_rsa: ^3.0.1
@@ -25,6 +25,8 @@ dependencies:
   dartz: ^0.10.1
   equatable: ^2.0.8
   get_it: ^9.2.1
+  video_player: ^2.11.0
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:

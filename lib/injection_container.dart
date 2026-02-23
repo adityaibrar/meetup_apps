@@ -42,6 +42,8 @@ import 'features/chat/domain/usecases/get_my_chats_usecase.dart';
 import 'features/chat/domain/usecases/get_room_status_usecase.dart';
 import 'features/chat/domain/usecases/init_private_chat_usecase.dart';
 import 'features/chat/domain/usecases/toggle_meetup_ready_usecase.dart';
+import 'features/chat/domain/usecases/upload_chat_media_usecase.dart';
+import 'features/chat/domain/usecases/download_chat_media_usecase.dart';
 import 'features/chat/presentation/providers/chat_provider.dart';
 
 // --- User Feature ---
@@ -138,6 +140,8 @@ void _initChatFeature() {
       getRoomStatusUseCase: sl(),
       toggleMeetupReadyUseCase: sl(),
       deleteChatUseCase: sl(),
+      uploadChatMediaUseCase: sl(),
+      downloadChatMediaUseCase: sl(),
     ),
   );
 
@@ -147,6 +151,8 @@ void _initChatFeature() {
   sl.registerLazySingleton(() => GetRoomStatusUseCase(sl()));
   sl.registerLazySingleton(() => ToggleMeetupReadyUseCase(sl()));
   sl.registerLazySingleton(() => DeleteChatUseCase(sl()));
+  sl.registerLazySingleton(() => UploadChatMediaUseCase(sl()));
+  sl.registerLazySingleton(() => DownloadChatMediaUseCase());
 
   // Repository
   sl.registerLazySingleton<ChatRepository>(

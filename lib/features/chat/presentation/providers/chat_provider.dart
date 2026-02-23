@@ -10,6 +10,8 @@ import '../../domain/usecases/get_my_chats_usecase.dart';
 import '../../domain/usecases/get_room_status_usecase.dart';
 import '../../domain/usecases/init_private_chat_usecase.dart';
 import '../../domain/usecases/toggle_meetup_ready_usecase.dart';
+import '../../domain/usecases/upload_chat_media_usecase.dart';
+import '../../domain/usecases/download_chat_media_usecase.dart';
 
 /// Provider utama untuk seluruh fitur Chat:
 /// WebSocket, messages, meetup, read receipts, E2E encryption.
@@ -24,6 +26,8 @@ class ChatProvider extends ChangeNotifier {
   final GetRoomStatusUseCase _getRoomStatusUseCase;
   final ToggleMeetupReadyUseCase _toggleMeetupReadyUseCase;
   final DeleteChatUseCase _deleteChatUseCase;
+  final UploadChatMediaUseCase _uploadChatMediaUseCase;
+  final DownloadChatMediaUseCase _downloadChatMediaUseCase;
 
   ChatProvider({
     required GetMyChatsUseCase getMyChatsUseCase,
@@ -31,11 +35,15 @@ class ChatProvider extends ChangeNotifier {
     required GetRoomStatusUseCase getRoomStatusUseCase,
     required ToggleMeetupReadyUseCase toggleMeetupReadyUseCase,
     required DeleteChatUseCase deleteChatUseCase,
+    required UploadChatMediaUseCase uploadChatMediaUseCase,
+    required DownloadChatMediaUseCase downloadChatMediaUseCase,
   }) : _getMyChatsUseCase = getMyChatsUseCase,
        _initPrivateChatUseCase = initPrivateChatUseCase,
        _getRoomStatusUseCase = getRoomStatusUseCase,
        _toggleMeetupReadyUseCase = toggleMeetupReadyUseCase,
-       _deleteChatUseCase = deleteChatUseCase;
+       _deleteChatUseCase = deleteChatUseCase,
+       _uploadChatMediaUseCase = uploadChatMediaUseCase,
+       _downloadChatMediaUseCase = downloadChatMediaUseCase;
 
   final List<ChatMessage> _messages = [];
   final Map<int, bool> _userStatus = {}; // userId -> isOnline (app level)
@@ -127,7 +135,14 @@ class ChatProvider extends ChangeNotifier {
               if (lastMsgSenderId == myUserId && myUserId != 0) {
                 final lastLocalMsg = await _dbHelper.getLastMessage(chat['id']);
                 if (lastLocalMsg != null) {
-                  chat['last_message'] = "You: ${lastLocalMsg.content}";
+                  String displayContent = lastLocalMsg.content;
+                  if (lastLocalMsg.mediaType == 'video') {
+                    displayContent = '🎥 Video';
+                  } else if (lastLocalMsg.mediaType == 'image') {
+                    displayContent = '📷 Gambar';
+                  }
+
+                  chat['last_message'] = "You: $displayContent";
                   resolved = true;
                 }
               }
@@ -151,10 +166,17 @@ class ChatProvider extends ChangeNotifier {
 
                     // If timestamps match (within 2 seconds tolerance)
                     if (diff <= 2) {
+                      String displayContent = lastLocalMsg.content;
+                      if (lastLocalMsg.mediaType == 'video') {
+                        displayContent = '🎥 Video';
+                      } else if (lastLocalMsg.mediaType == 'image') {
+                        displayContent = '📷 Gambar';
+                      }
+
                       if (lastLocalMsg.isMe) {
-                        chat['last_message'] = "You: ${lastLocalMsg.content}";
+                        chat['last_message'] = "You: $displayContent";
                       } else {
-                        chat['last_message'] = lastLocalMsg.content;
+                        chat['last_message'] = displayContent;
                       }
                       resolved = true;
                     }
@@ -398,6 +420,81 @@ class ChatProvider extends ChangeNotifier {
     _socketService.sendMessage(msg);
   }
 
+  // ── Send Media Message ──
+
+  Future<void> sendMediaMessage(String filePath, int myUserId) async {
+    if (_activeRoomId == null || _authToken == null) return;
+
+    // TODO: implement optimistic UI for media? We'll just wait for upload for now
+    final result = await _uploadChatMediaUseCase.call(_authToken!, filePath);
+    result.fold((failure) => log('Error uploading media: ${failure.message}'), (
+      data,
+    ) async {
+      final mediaUrl = data['url'];
+      final mediaType = data['media_type'];
+
+      // Setel text content buat preview & notif
+      final String textContent = mediaType == 'video'
+          ? '🎥 Video'
+          : '📷 Gambar';
+
+      // After upload, send via WebSocket
+      final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+      final tempMsg = ChatMessage(
+        id: tempId,
+        chatRoomId: _activeRoomId!,
+        senderId: myUserId,
+        content: '',
+        isRead: false,
+        isMe: true,
+        timestamp: DateTime.now(),
+        mediaType: mediaType,
+        mediaUrl: mediaUrl,
+        localMediaPath: filePath,
+      );
+
+      _messages.insert(0, tempMsg);
+      notifyListeners();
+
+      await _dbHelper.insertMessage(tempMsg);
+
+      // Encrypt
+      String encryptedContent = textContent;
+      if (_activeRoomPublicKey != null) {
+        try {
+          encryptedContent = await _encryptionService.encrypt(
+            textContent,
+            _activeRoomPublicKey!,
+          );
+        } catch (e) {
+          log("Encryption failed: $e");
+        }
+      }
+
+      // ** Update Chat List (Home Screen) - Realtime update **
+      final chatIndex = _myChats.indexWhere((c) => c['id'] == _activeRoomId);
+      if (chatIndex != -1) {
+        var chat = _myChats[chatIndex];
+        chat['last_message'] = textContent; // Show plain text in local UI
+        chat['last_message_at'] = DateTime.now().toIso8601String();
+        _myChats.removeAt(chatIndex);
+        _myChats.insert(0, chat);
+        notifyListeners();
+      }
+
+      final msg = {
+        'type': 'chat',
+        'chat_room_id': _activeRoomId,
+        'content': encryptedContent,
+        'media_type': mediaType,
+        'media_url': mediaUrl,
+        'temp_id': tempId,
+      };
+
+      _socketService.sendMessage(msg);
+    });
+  }
+
   // ── Incoming Messages ──
 
   /// Handle semua incoming WS messages — chat, read_receipt, status, meetup.
@@ -444,7 +541,9 @@ class ChatProvider extends ChangeNotifier {
           if (chatMsg.isMe) {
             chatMsg = chatMsg.copyWith(
               content: _messages[index].content,
-            ); // Keep original plain text
+              localMediaPath:
+                  _messages[index].localMediaPath, // Preserve local file path
+            );
           }
 
           _messages[index] = chatMsg;
@@ -458,22 +557,83 @@ class ChatProvider extends ChangeNotifier {
           }
 
           if (!isDuplicate) {
+            // ** PRESERVE PLAIN TEXT CONTENT from Local DB **
+            if (chatMsg.isMe && chatMsg.content.isEmpty) {
+              // Ignore empty insert if not needed or at least merge with DB
+            }
+
             _messages.insert(0, chatMsg);
-            if (chatMsg.content.trim().isNotEmpty) {
+            if (chatMsg.content.trim().isNotEmpty || chatMsg.mediaUrl != null) {
+              await _dbHelper.insertMessage(chatMsg);
+            }
+          } else {
+            // Jika sudah ada (isDuplicate), maka perbarui dari server tanpa merusak localMediaPath
+            final idx = _messages.indexWhere((m) => m.id == chatMsg.id);
+            if (idx != -1) {
+              final existingMsg = _messages[idx];
+              chatMsg = chatMsg.copyWith(
+                content: existingMsg.content.isNotEmpty
+                    ? existingMsg.content
+                    : chatMsg.content,
+                localMediaPath: existingMsg.localMediaPath, // <--- INI PENTING!
+                mediaUrl: chatMsg.mediaUrl ?? existingMsg.mediaUrl,
+                mediaType: chatMsg.mediaType ?? existingMsg.mediaType,
+              );
+              _messages[idx] = chatMsg;
               await _dbHelper.insertMessage(chatMsg);
             }
           }
         }
         notifyListeners();
+
+        // ── Download Media if necessary ──
+        if (chatMsg.mediaUrl != null &&
+            chatMsg.mediaUrl!.isNotEmpty &&
+            !chatMsg.isMe) {
+          _downloadChatMediaUseCase.call(chatMsg.mediaUrl!).then((res) {
+            res.fold((failure) => log('Download error: ${failure.message}'), (
+              localPath,
+            ) async {
+              final idx = _messages.indexWhere((m) => m.id == chatMsg.id);
+              if (idx != -1) {
+                _messages[idx] = _messages[idx].copyWith(
+                  localMediaPath: localPath,
+                );
+                await _dbHelper.insertMessage(_messages[idx]);
+                notifyListeners();
+
+                // Trigger 'read' event ke WebSocket karena media sudah selesai diunduh dan diputar/ditampilkan.
+                // Hal ini akan memicu backend u/ menghapus file media dari Server.
+                if (chatMsg.id != null &&
+                    chatMsg.id!.isNotEmpty &&
+                    !chatMsg.id!.startsWith('temp')) {
+                  _socketService.sendMessage({
+                    'type': 'read',
+                    'message_id': int.tryParse(chatMsg.id!) ?? 0,
+                    'chat_room_id': chatMsg.chatRoomId,
+                  });
+                }
+              }
+            });
+          });
+        }
       }
 
       // ** 2. Update Chat List — realtime update **
       final chatIndex = _myChats.indexWhere(
         (c) => c['id'] == chatMsg.chatRoomId,
       );
+
+      String displayContent = chatMsg.content;
+      if (chatMsg.mediaType == 'video') {
+        displayContent = '🎥 Video';
+      } else if (chatMsg.mediaType == 'image') {
+        displayContent = '📷 Gambar';
+      }
+
       if (chatIndex != -1) {
         var chat = _myChats[chatIndex];
-        chat['last_message'] = chatMsg.content;
+        chat['last_message'] = displayContent;
         chat['last_message_at'] = chatMsg.timestamp.toIso8601String();
 
         if (_activeRoomId != chatMsg.chatRoomId && !chatMsg.isMe) {
@@ -492,7 +652,7 @@ class ChatProvider extends ChangeNotifier {
         _myChats.insert(0, {
           'id': chatMsg.chatRoomId,
           'name': chatMsg.senderName ?? 'New Chat',
-          'last_message': chatMsg.content,
+          'last_message': displayContent,
           'last_message_at': chatMsg.timestamp.toIso8601String(),
           'unread_count': chatMsg.isMe ? 0 : 1,
           'other_user_id': chatMsg.senderId == myUserId ? 0 : chatMsg.senderId,

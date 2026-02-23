@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/config/app_config.dart';
+import '../../../../core/widgets/video_player_widget.dart';
+import 'dart:io';
 import '../../domain/entities/chat_message.dart';
 import '../../../product/presentation/screens/product_detail_screen.dart';
 
@@ -150,27 +153,36 @@ class _ChatBubbleState extends State<ChatBubble>
                           if (widget.message.replyToContent != null)
                             _buildReplyReference(isMe),
 
+                          // ── Media Rendering ──
+                          if (widget.message.mediaType != null &&
+                              widget.message.mediaType!.isNotEmpty &&
+                              widget.message.mediaType != 'text')
+                            _buildMediaContent(),
+
                           // ── Message Content + Timestamp ──
                           Wrap(
                             alignment: WrapAlignment.end,
                             crossAxisAlignment: WrapCrossAlignment.end,
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  right: 8.0,
-                                  bottom: 2.0,
-                                ),
-                                child: Text(
-                                  widget.message.content,
-                                  style: TextStyle(
-                                    color: isMe
-                                        ? Colors.white
-                                        : AppColors.textPrimary,
-                                    fontSize: 14.5,
-                                    height: 1.35,
+                              if (widget.message.content.isNotEmpty &&
+                                  widget.message.content != '📷 Gambar' &&
+                                  widget.message.content != '🎥 Video')
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    right: 8.0,
+                                    bottom: 2.0,
+                                  ),
+                                  child: Text(
+                                    widget.message.content,
+                                    style: TextStyle(
+                                      color: isMe
+                                          ? Colors.white
+                                          : AppColors.textPrimary,
+                                      fontSize: 14.5,
+                                      height: 1.35,
+                                    ),
                                   ),
                                 ),
-                              ),
                               Padding(
                                 padding: const EdgeInsets.only(bottom: 2.0),
                                 child: Row(
@@ -265,6 +277,64 @@ class _ChatBubbleState extends State<ChatBubble>
                   : AppColors.textSecondary,
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMediaContent() {
+    final mediaType = widget.message.mediaType;
+    final url = widget.message.mediaUrl;
+    final localPath = widget.message.localMediaPath;
+
+    if (mediaType == null) return const SizedBox();
+
+    Widget content;
+
+    if (mediaType == 'image') {
+      if (localPath != null && File(localPath).existsSync()) {
+        content = Image.file(File(localPath), fit: BoxFit.cover);
+      } else if (url != null) {
+        final baseUrl = AppConfig.baseUrl.replaceAll('/api', '');
+        content = Image.network(
+          '$baseUrl$url',
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) =>
+              const Center(child: Icon(Icons.broken_image)),
+        );
+      } else {
+        content = const Center(child: CircularProgressIndicator());
+      }
+    } else if (mediaType == 'video') {
+      if (localPath != null && File(localPath).existsSync()) {
+        content = VideoPlayerWidget(url: localPath, isLocal: true);
+      } else if (url != null) {
+        final baseUrl = AppConfig.baseUrl.replaceAll('/api', '');
+        content = VideoPlayerWidget(url: '$baseUrl$url', isLocal: false);
+      } else {
+        content = const Center(child: CircularProgressIndicator());
+      }
+    } else {
+      content = const Icon(Icons.insert_drive_file, size: 48);
+    }
+
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 250, maxWidth: 250),
+      margin: EdgeInsets.only(bottom: widget.message.content.isEmpty ? 4 : 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.black12,
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: Stack(
+        children: [
+          content,
+          if (localPath == null && url == null)
+            const Positioned.fill(
+              child: Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
+            ),
         ],
       ),
     );
