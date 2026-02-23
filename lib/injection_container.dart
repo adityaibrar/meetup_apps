@@ -57,6 +57,16 @@ import 'features/user/domain/usecases/update_public_key_usecase.dart'
     as user_usecase;
 import 'features/user/presentation/providers/user_provider.dart';
 
+// --- Rating UseCases (part of user feature) ---
+import 'features/user/domain/usecases/submit_rating_usecase.dart';
+import 'features/user/domain/usecases/get_user_ratings_usecase.dart';
+
+// --- Rating Data Layer (part of user feature) ---
+import 'features/user/domain/repositories/rating_repository.dart';
+import 'features/user/data/repositories/rating_repository_impl.dart';
+import 'features/user/data/datasources/rating_remote_datasource.dart';
+import 'features/user/data/datasources/rating_remote_datasource_impl.dart';
+
 final sl = GetIt.instance;
 
 Future<void> init() async {
@@ -172,6 +182,8 @@ void _initUserFeature() {
       getUserProfileUseCase: sl(),
       searchUsersUseCase: sl(),
       updatePublicKeyUseCase: sl(),
+      submitRatingUseCase: sl(),
+      getUserRatingsUseCase: sl(),
     ),
   );
 
@@ -179,15 +191,23 @@ void _initUserFeature() {
   sl.registerLazySingleton(() => GetUserProfileUseCase(sl()));
   sl.registerLazySingleton(() => SearchUsersUseCase(sl()));
   sl.registerLazySingleton(() => user_usecase.UpdatePublicKeyUseCase(sl()));
+  sl.registerLazySingleton(() => SubmitRatingUseCase(sl()));
+  sl.registerLazySingleton(() => GetUserRatingsUseCase(sl()));
 
   // Repository
   sl.registerLazySingleton<UserRepository>(
     () => UserRepositoryImpl(remoteDataSource: sl()),
   );
+  sl.registerLazySingleton<RatingRepository>(
+    () => RatingRepositoryImpl(remoteDataSource: sl()),
+  );
 
   // Data Source
   sl.registerLazySingleton<UserRemoteDataSource>(
     () => UserRemoteDataSourceImpl(apiService: sl()),
+  );
+  sl.registerLazySingleton<RatingRemoteDataSource>(
+    () => RatingRemoteDataSourceImpl(apiService: sl()),
   );
 }
 

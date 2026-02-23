@@ -12,6 +12,8 @@ class UserModel extends User {
     super.fullName,
     super.city,
     super.province,
+    super.averageRating = 0.0,
+    super.totalReviews = 0,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -25,6 +27,10 @@ class UserModel extends User {
       fullName: json['full_name'],
       city: json['city'],
       province: json['province'],
+      averageRating: json['average_rating'] != null
+          ? double.tryParse(json['average_rating'].toString()) ?? 0.0
+          : 0.0,
+      totalReviews: json['total_reviews'] ?? 0,
     );
   }
 
@@ -38,5 +44,7 @@ class UserModel extends User {
     'full_name': fullName,
     'city': city,
     'province': province,
+    'average_rating': averageRating,
+    'total_reviews': totalReviews,
   };
 }

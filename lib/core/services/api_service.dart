@@ -372,4 +372,41 @@ class ApiService {
     }
     throw Exception('Gagal memuat kategori');
   }
+
+  // ── Rating ──
+  Future<Map<String, dynamic>> submitRating(
+    String token,
+    int targetUserId,
+    int score,
+    String review,
+  ) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/users/$targetUserId/rate'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'score': score, 'review': review}),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    final error = jsonDecode(response.body);
+    throw Exception(error['error'] ?? 'Gagal submit rating');
+  }
+
+  Future<List<dynamic>> getUserRatings(String token, int targetUserId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/users/$targetUserId/ratings'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return data['ratings'] ?? [];
+    }
+    throw Exception('Gagal memuat daftar rating');
+  }
 }

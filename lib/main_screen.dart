@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_text_styles.dart';
 import 'features/user/presentation/providers/user_provider.dart';
+import 'features/user/domain/entities/rating_entity.dart';
 import 'features/auth/presentation/providers/auth_provider.dart';
 import 'features/chat/presentation/screens/chat_list_screen.dart';
 import 'features/product/presentation/providers/product_provider.dart';
@@ -153,6 +154,7 @@ class _ProfileTabState extends State<_ProfileTab> {
     try {
       await userProvider.loadUserProfile(auth.token!, auth.user!.id);
       await productProvider.loadMyProducts(auth.token!);
+      await userProvider.loadUserRatings(auth.token!, auth.user!.id);
 
       if (mounted) {
         setState(() {
@@ -178,6 +180,13 @@ class _ProfileTabState extends State<_ProfileTab> {
     final email = _profile?['email'] ?? auth.user?.email ?? '';
     final points = _profile?['points'] ?? auth.user?.points ?? 0;
     final imageUrl = _profile?['image_url'] ?? auth.user?.imageUrl;
+    final averageRating =
+        _profile?['average_rating']?.toDouble() ??
+        auth.user?.averageRating ??
+        0.0;
+    final totalReviews =
+        _profile?['total_reviews'] ?? auth.user?.totalReviews ?? 0;
+    final userProvider = Provider.of<UserProvider>(context);
 
     return Scaffold(
       body: CustomScrollView(
@@ -232,6 +241,36 @@ class _ProfileTabState extends State<_ProfileTab> {
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.8),
                       fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.star_rounded,
+                          color: Colors.amber,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$averageRating ($totalReviews Ulasan)',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -424,6 +463,37 @@ class _ProfileTabState extends State<_ProfileTab> {
               ),
             ),
 
+          // Reviews
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+              child: Text('Ulasan Tentang Anda', style: AppTextStyles.h3),
+            ),
+          ),
+          if (userProvider.userRatings.isEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 8,
+                ),
+                child: Text(
+                  'Belum ada ulasan.',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            )
+          else
+            SliverList(
+              delegate: SliverChildBuilderDelegate((context, index) {
+                return _buildReviewItem(userProvider.userRatings[index]);
+              }, childCount: userProvider.userRatings.length),
+            ),
+
+          const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
           // Logout
           SliverToBoxAdapter(
             child: Padding(
@@ -446,6 +516,73 @@ class _ProfileTabState extends State<_ProfileTab> {
           ),
 
           const SliverToBoxAdapter(child: SizedBox(height: 40)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReviewItem(RatingEntity rating) {
+    final raterName =
+        rating.rater?.fullName ?? rating.rater?.username ?? 'Pengguna';
+    final raterInitial = raterName.isNotEmpty
+        ? raterName[0].toUpperCase()
+        : '?';
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundSecondary,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: AppColors.primary.withValues(alpha: 0.2),
+                child: Text(
+                  raterInitial,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      raterName,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Row(
+                      children: List.generate(5, (index) {
+                        return Icon(
+                          index < rating.score
+                              ? Icons.star_rounded
+                              : Icons.star_outline_rounded,
+                          color: Colors.amber,
+                          size: 14,
+                        );
+                      }),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (rating.review.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(rating.review, style: AppTextStyles.bodyMedium),
+          ],
         ],
       ),
     );

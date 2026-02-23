@@ -11,6 +11,8 @@ class User extends Equatable {
   final String? fullName;
   final String? city;
   final String? province;
+  final double averageRating;
+  final int totalReviews;
 
   const User({
     required this.id,
@@ -22,6 +24,8 @@ class User extends Equatable {
     this.fullName,
     this.city,
     this.province,
+    this.averageRating = 0.0,
+    this.totalReviews = 0,
   });
 
   @override
@@ -35,5 +39,7 @@ class User extends Equatable {
     fullName,
     city,
     province,
+    averageRating,
+    totalReviews,
   ];
 }

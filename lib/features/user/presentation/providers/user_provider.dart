@@ -2,17 +2,24 @@ import 'package:flutter/material.dart';
 import '../../domain/usecases/get_user_profile_usecase.dart';
 import '../../domain/usecases/search_users_usecase.dart';
 import '../../domain/usecases/update_public_key_usecase.dart';
+import '../../domain/usecases/submit_rating_usecase.dart';
+import '../../domain/usecases/get_user_ratings_usecase.dart';
+import '../../domain/entities/rating_entity.dart';
 import 'dart:developer';
 
 class UserProvider with ChangeNotifier {
   final GetUserProfileUseCase getUserProfileUseCase;
   final SearchUsersUseCase searchUsersUseCase;
   final UpdatePublicKeyUseCase updatePublicKeyUseCase;
+  final SubmitRatingUseCase submitRatingUseCase;
+  final GetUserRatingsUseCase getUserRatingsUseCase;
 
   UserProvider({
     required this.getUserProfileUseCase,
     required this.searchUsersUseCase,
     required this.updatePublicKeyUseCase,
+    required this.submitRatingUseCase,
+    required this.getUserRatingsUseCase,
   });
 
   bool _isLoading = false;
@@ -26,6 +33,9 @@ class UserProvider with ChangeNotifier {
 
   Map<String, dynamic>? _userProfile;
   Map<String, dynamic>? get userProfile => _userProfile;
+
+  List<RatingEntity> _userRatings = [];
+  List<RatingEntity> get userRatings => _userRatings;
 
   void _setLoading(bool value) {
     _isLoading = value;
@@ -109,5 +119,56 @@ class UserProvider with ChangeNotifier {
 
     _setLoading(false);
     return isSuccess;
+  }
+
+  Future<bool> submitRating(
+    String token,
+    int ratedUserId,
+    int score,
+    String review,
+  ) async {
+    _setLoading(true);
+    _setError(null);
+
+    final params = SubmitRatingParams(
+      ratedUserId: ratedUserId,
+      score: score,
+      review: review,
+    );
+    final result = await submitRatingUseCase(token, params);
+
+    bool isSuccess = false;
+    result.fold(
+      (failure) {
+        _setError(failure.message);
+        log('Error submitting rating: ${failure.message}');
+      },
+      (_) {
+        isSuccess = true;
+      },
+    );
+
+    _setLoading(false);
+    return isSuccess;
+  }
+
+  Future<void> loadUserRatings(String token, int ratedUserId) async {
+    _setLoading(true);
+    _setError(null);
+
+    final result = await getUserRatingsUseCase(token, ratedUserId);
+
+    result.fold(
+      (failure) {
+        _setError(failure.message);
+        _userRatings = [];
+        log('Error loading user ratings: ${failure.message}');
+      },
+      (data) {
+        _userRatings = data;
+      },
+    );
+
+    _setLoading(false);
   }
 }
