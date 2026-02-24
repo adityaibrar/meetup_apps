@@ -14,7 +14,7 @@ class TopUpScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => TopUpProvider(),
+      create: (_) => TopUpProvider()..fetchPackages(),
       child: const _TopUpBody(),
     );
   }
@@ -39,89 +39,104 @@ class _TopUpBody extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Bento-style package grid
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 0.9,
-              ),
-              itemCount: provider.packages.length,
-              itemBuilder: (context, index) {
-                final pkg = provider.packages[index];
-                final isSelected = provider.selectedPoints == pkg['points'];
-                return GestureDetector(
-                  onTap: () => provider.selectPoints(pkg['points']),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
-                    curve: Curves.easeInOut,
-                    decoration: BoxDecoration(
-                      gradient: isSelected ? AppColors.primaryGradient : null,
-                      color: isSelected ? null : AppColors.surface,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isSelected
-                            ? Colors.transparent
-                            : AppColors.border,
-                        width: 1.5,
-                      ),
-                      boxShadow: isSelected
-                          ? [
-                              BoxShadow(
-                                color: AppColors.primary.withValues(
-                                  alpha: 0.25,
-                                ),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                            ]
-                          : [
-                              BoxShadow(
-                                color: AppColors.shadowLight,
-                                blurRadius: 6,
-                              ),
-                            ],
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.toll,
-                          size: 28,
+            if (provider.isLoadingPackages)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (provider.packages.isEmpty)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: Text('Tidak ada paket tersedia'),
+                ),
+              )
+            else
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.9,
+                ),
+                itemCount: provider.packages.length,
+                itemBuilder: (context, index) {
+                  final pkg = provider.packages[index];
+                  final isSelected = provider.selectedPoints == pkg['points'];
+                  return GestureDetector(
+                    onTap: () => provider.selectPoints(pkg['points']),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeInOut,
+                      decoration: BoxDecoration(
+                        gradient: isSelected ? AppColors.primaryGradient : null,
+                        color: isSelected ? null : AppColors.surface,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
                           color: isSelected
-                              ? Colors.amber
-                              : AppColors.textTertiary,
+                              ? Colors.transparent
+                              : AppColors.border,
+                          width: 1.5,
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          pkg['label'],
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.25,
+                                  ),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ]
+                            : [
+                                BoxShadow(
+                                  color: AppColors.shadowLight,
+                                  blurRadius: 6,
+                                ),
+                              ],
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.toll,
+                            size: 28,
                             color: isSelected
-                                ? Colors.white
-                                : AppColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          AppFormatters.currency(pkg['price']),
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isSelected
-                                ? Colors.white.withValues(alpha: 0.8)
+                                ? Colors.amber
                                 : AppColors.textTertiary,
-                            fontWeight: FontWeight.w500,
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 8),
+                          Text(
+                            pkg['label'],
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: isSelected
+                                  ? Colors.white
+                                  : AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            AppFormatters.currency(pkg['price']),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isSelected
+                                  ? Colors.white.withValues(alpha: 0.8)
+                                  : AppColors.textTertiary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
+                  );
+                },
+              ),
 
             const SizedBox(height: 32),
             Text('Metode Pembayaran', style: AppTextStyles.h3),

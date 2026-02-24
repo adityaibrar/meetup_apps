@@ -184,6 +184,15 @@ class ApiService {
   }
 
   // ── Top Up ──
+  Future<List<Map<String, dynamic>>> getTopupPackages() async {
+    final response = await http.get(Uri.parse('$baseUrl/topup/packages'));
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body)['data'];
+      return data.cast<Map<String, dynamic>>();
+    }
+    throw Exception('Gagal memuat paket top up');
+  }
+
   Future<Map<String, dynamic>> createTopUpCharge(
     String token,
     int points,

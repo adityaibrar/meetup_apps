@@ -18,11 +18,9 @@ class TopUpProvider extends ChangeNotifier {
   bool get isChecking => _isChecking;
   String? get error => _error;
 
-  final List<Map<String, dynamic>> packages = [
-    {'points': 10, 'price': 15000, 'label': '10 Poin'},
-    {'points': 40, 'price': 50000, 'label': '40 Poin'},
-    {'points': 100, 'price': 100000, 'label': '100 Poin'},
-  ];
+  List<Map<String, dynamic>> packages = [];
+  bool _isLoadingPackages = false;
+  bool get isLoadingPackages => _isLoadingPackages;
 
   final List<Map<String, dynamic>> paymentMethods = [
     {
@@ -65,6 +63,22 @@ class TopUpProvider extends ChangeNotifier {
   void selectPayment(String paymentId) {
     _selectedPayment = paymentId;
     notifyListeners();
+  }
+
+  Future<void> fetchPackages() async {
+    _isLoadingPackages = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      packages = await _apiService.getTopupPackages();
+      _isLoadingPackages = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoadingPackages = false;
+      _error = e.toString();
+      notifyListeners();
+    }
   }
 
   /// Buat charge top up ke Midtrans.
