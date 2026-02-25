@@ -84,7 +84,33 @@ class _AddProductScreenState extends State<AddProductScreen> {
   Future<void> _pickImages() async {
     final images = await _picker.pickMultiImage();
     if (images.isNotEmpty) {
-      setState(() => _imageFiles.addAll(images.map((x) => File(x.path))));
+      final int currentCount = _imageFiles.length + _currentImageUrls.length;
+      final int remainingSlots = 3 - currentCount;
+
+      if (remainingSlots <= 0) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Maksimal 3 gambar per produk')),
+          );
+        }
+        return;
+      }
+
+      final List<XFile> allowedImages = images.length > remainingSlots
+          ? images.sublist(0, remainingSlots)
+          : images;
+
+      if (images.length > remainingSlots && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gambar dibatasi maksimal 3. Sisa gambar diabaikan.'),
+          ),
+        );
+      }
+
+      setState(
+        () => _imageFiles.addAll(allowedImages.map((x) => File(x.path))),
+      );
     }
   }
 

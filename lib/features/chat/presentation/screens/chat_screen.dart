@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/providers/notification_provider.dart' as core_notif;
 import '../providers/chat_provider.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -56,6 +57,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     if (chat.meetupConfirmed) {
       _showOnGoingDialog();
+      _scheduleDummyNotification(); // Memicu notifikasi testing (5 detik)
       chat.resetMeetupState();
       _previousReadyUserIds.clear();
       return;
@@ -93,6 +95,55 @@ class _ChatScreenState extends State<ChatScreen> {
         ],
       ),
     );
+  }
+
+  void _scheduleDummyNotification() {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final notification = Provider.of<core_notif.NotificationProvider>(
+      context,
+      listen: false,
+    );
+
+    if (auth.user == null) return;
+
+    final userId = auth.user!.id;
+    int? sellerId = widget.productContext?['seller_id'];
+    int dummyProductId = widget.productContext?['id'] ?? 1;
+    String dummyProductName =
+        widget.productContext?['title'] ?? 'Barang Meetup Ini';
+
+    // Jika dari chat list, productContext kosong, cari dari history chat
+    if (sellerId == null) {
+      final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+      for (var msg in chatProvider.messages) {
+        if (msg.product != null && msg.product!['seller_id'] != null) {
+          sellerId = msg.product!['seller_id'];
+          dummyProductId = msg.product!['id'] ?? 1;
+          dummyProductName = msg.product!['title'] ?? 'Barang Meetup Ini';
+          break;
+        }
+      }
+    }
+
+    // Hanya kirimkan notifikasi penagihan ke PENJUAL
+    if (sellerId != null && userId != sellerId) {
+      return;
+    }
+
+    // Jika masih null (misal murni chat tanpa konteks barang), kita skip saja simulasi notifikasinya
+    if (sellerId == null) {
+      return;
+    }
+
+    // Jadwalkan notifikasi H+1 (24 jam) setelah meetup disepakati
+    Future.delayed(const Duration(hours: 24), () {
+      // Ensure the notification API gets called even if user left this screen
+      notification.logDummyNotification(
+        userId,
+        dummyProductId,
+        dummyProductName,
+      );
+    });
   }
 
   void _sendProductMessage() {

@@ -354,6 +354,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               'title': _product['title'],
               'price': _product['price'],
               'image_url': _product['image_url'],
+              'seller_id': sellerId,
             },
           ),
         ),

@@ -10,6 +10,8 @@ import 'features/product/presentation/providers/product_provider.dart';
 import 'features/product/presentation/screens/marketplace_screen.dart';
 import 'features/topup/presentation/screens/topup_screen.dart';
 import 'features/topup/presentation/screens/topup_history_screen.dart';
+import 'features/notification/presentation/screens/notification_screen.dart';
+import 'core/providers/notification_provider.dart';
 
 /// MainScreen dengan bottom navigation menggunakan animated pill-style nav.
 class MainScreen extends StatefulWidget {
@@ -156,6 +158,12 @@ class _ProfileTabState extends State<_ProfileTab> {
       await productProvider.loadMyProducts(auth.token!);
       await userProvider.loadUserRatings(auth.token!, auth.user!.id);
 
+      // Initialize Notification provider
+      Provider.of<NotificationProvider>(
+        context,
+        listen: false,
+      ).init(auth.user!.id);
+
       if (mounted) {
         setState(() {
           _profile = userProvider.userProfile;
@@ -227,29 +235,82 @@ class _ProfileTabState extends State<_ProfileTab> {
               child: Column(
                 children: [
                   // Avatar with Tier Border
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: tierColor, width: 3),
-                    ),
-                    child: CircleAvatar(
-                      radius: 44,
-                      backgroundColor: Colors.white.withValues(alpha: 0.3),
-                      backgroundImage: (imageUrl != null && imageUrl.isNotEmpty)
-                          ? NetworkImage(imageUrl)
-                          : null,
-                      child: (imageUrl == null || imageUrl.isEmpty)
-                          ? Text(
-                              fullName[0].toUpperCase(),
-                              style: const TextStyle(
-                                fontSize: 36,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            )
-                          : null,
-                    ),
+                  Stack(
+                    alignment: Alignment.topRight,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: tierColor, width: 3),
+                        ),
+                        child: CircleAvatar(
+                          radius: 44,
+                          backgroundColor: Colors.white.withValues(alpha: 0.3),
+                          backgroundImage:
+                              (imageUrl != null && imageUrl.isNotEmpty)
+                              ? NetworkImage(imageUrl)
+                              : null,
+                          child: (imageUrl == null || imageUrl.isEmpty)
+                              ? Text(
+                                  fullName[0].toUpperCase(),
+                                  style: const TextStyle(
+                                    fontSize: 36,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : null,
+                        ),
+                      ),
+                      Positioned(
+                        right: -4,
+                        top: -4,
+                        child: Consumer<NotificationProvider>(
+                          builder: (context, notifProvider, child) {
+                            return Stack(
+                              children: [
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.notifications,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const NotificationScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                if (notifProvider.unreadCount > 0)
+                                  Positioned(
+                                    right: 8,
+                                    top: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(
+                                        color: AppColors.error,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Text(
+                                        notifProvider.unreadCount.toString(),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
 

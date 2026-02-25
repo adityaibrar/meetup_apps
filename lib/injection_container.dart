@@ -1,5 +1,6 @@
 import 'package:get_it/get_it.dart';
 import 'core/services/api_service.dart';
+import 'core/providers/notification_provider.dart';
 import 'features/chat/data/datasources/encryption_service.dart';
 
 // --- TopUp Feature ---
@@ -73,6 +74,7 @@ Future<void> init() async {
   // --- Core ---
   sl.registerLazySingleton<ApiService>(() => ApiService());
   sl.registerLazySingleton<EncryptionService>(() => EncryptionService());
+  sl.registerLazySingleton<NotificationProvider>(() => NotificationProvider());
 
   // --- Features ---
   _initAuthFeature();

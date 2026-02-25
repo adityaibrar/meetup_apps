@@ -7,6 +7,7 @@ import 'features/chat/presentation/providers/chat_provider.dart';
 import 'features/product/presentation/providers/product_provider.dart';
 import 'features/user/presentation/providers/user_provider.dart';
 import 'features/topup/presentation/providers/topup_history_provider.dart';
+import 'core/providers/notification_provider.dart';
 import 'injection_container.dart' as di;
 
 void main() async {
@@ -27,6 +28,7 @@ class MeetupApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => di.sl<TopUpHistoryProvider>()),
         ChangeNotifierProvider(create: (_) => di.sl<ProductProvider>()),
         ChangeNotifierProvider(create: (_) => di.sl<UserProvider>()),
+        ChangeNotifierProvider(create: (_) => di.sl<NotificationProvider>()),
       ],
       child: MaterialApp(
         title: 'Meetup',

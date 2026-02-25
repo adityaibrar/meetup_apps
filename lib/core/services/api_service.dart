@@ -380,6 +380,22 @@ class ApiService {
     if (response.statusCode != 200) throw Exception('Gagal update produk');
   }
 
+  Future<void> markProductAsSold(String token, int productId) async {
+    final response = await http.patch(
+      Uri.parse('$baseUrl/products/$productId/sold'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+    if (response.statusCode != 200) {
+      final error = jsonDecode(response.body);
+      throw Exception(
+        error['error'] ?? 'Gagal menandai produk sebagai terjual',
+      );
+    }
+  }
+
   Future<void> deleteProduct(String token, int productId) async {
     final response = await http.delete(
       Uri.parse('$baseUrl/products/$productId'),
