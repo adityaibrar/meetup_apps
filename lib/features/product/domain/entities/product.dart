@@ -11,6 +11,7 @@ class Product extends Equatable {
   final String? imageUrl;
   final List<String>? images;
   final Map<String, dynamic>? seller;
+  final int viewsCount;
 
   const Product({
     required this.id,
@@ -22,6 +23,7 @@ class Product extends Equatable {
     this.imageUrl,
     this.images,
     this.seller,
+    this.viewsCount = 0,
   });
 
   @override
@@ -35,5 +37,6 @@ class Product extends Equatable {
     imageUrl,
     images,
     seller,
+    viewsCount,
   ];
 }

@@ -186,7 +186,25 @@ class _ProfileTabState extends State<_ProfileTab> {
         0.0;
     final totalReviews =
         _profile?['total_reviews'] ?? auth.user?.totalReviews ?? 0;
+    final tier = _profile?['tier'] ?? auth.user?.tier ?? 'bronze';
+    final isTrusted = _profile?['is_trusted'] ?? auth.user?.isTrusted ?? false;
     final userProvider = Provider.of<UserProvider>(context);
+
+    // Dynamic Tier Color
+    Color tierColor;
+    switch (tier.toLowerCase()) {
+      case 'platinum':
+        tierColor = const Color(0xFFE5E4E2); // Platinum
+        break;
+      case 'gold':
+        tierColor = const Color(0xFFFFD700); // Gold
+        break;
+      case 'silver':
+        tierColor = const Color(0xFFC0C0C0); // Silver
+        break;
+      default:
+        tierColor = const Color(0xFFCD7F32); // Bronze
+    }
 
     return Scaffold(
       body: CustomScrollView(
@@ -208,32 +226,57 @@ class _ProfileTabState extends State<_ProfileTab> {
               ),
               child: Column(
                 children: [
-                  // Avatar
-                  CircleAvatar(
-                    radius: 44,
-                    backgroundColor: Colors.white.withValues(alpha: 0.3),
-                    backgroundImage: (imageUrl != null && imageUrl.isNotEmpty)
-                        ? NetworkImage(imageUrl)
-                        : null,
-                    child: (imageUrl == null || imageUrl.isEmpty)
-                        ? Text(
-                            fullName[0].toUpperCase(),
-                            style: const TextStyle(
-                              fontSize: 36,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          )
-                        : null,
+                  // Avatar with Tier Border
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: tierColor, width: 3),
+                    ),
+                    child: CircleAvatar(
+                      radius: 44,
+                      backgroundColor: Colors.white.withValues(alpha: 0.3),
+                      backgroundImage: (imageUrl != null && imageUrl.isNotEmpty)
+                          ? NetworkImage(imageUrl)
+                          : null,
+                      child: (imageUrl == null || imageUrl.isEmpty)
+                          ? Text(
+                              fullName[0].toUpperCase(),
+                              style: const TextStyle(
+                                fontSize: 36,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            )
+                          : null,
+                    ),
                   ),
                   const SizedBox(height: 16),
-                  Text(
-                    fullName,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+
+                  // Username & Trusted Badge
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        fullName,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      if (isTrusted) ...[
+                        const SizedBox(width: 8),
+                        const Tooltip(
+                          message: 'Trusted User',
+                          child: Icon(
+                            Icons.verified,
+                            color: Colors.blue,
+                            size: 22,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(

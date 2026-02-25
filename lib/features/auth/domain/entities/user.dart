@@ -13,6 +13,8 @@ class User extends Equatable {
   final String? province;
   final double averageRating;
   final int totalReviews;
+  final String tier;
+  final bool isTrusted;
 
   const User({
     required this.id,
@@ -26,6 +28,8 @@ class User extends Equatable {
     this.province,
     this.averageRating = 0.0,
     this.totalReviews = 0,
+    this.tier = 'bronze',
+    this.isTrusted = false,
   });
 
   @override
@@ -41,5 +45,7 @@ class User extends Equatable {
     province,
     averageRating,
     totalReviews,
+    tier,
+    isTrusted,
   ];
 }

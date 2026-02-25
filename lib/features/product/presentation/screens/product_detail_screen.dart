@@ -11,17 +11,50 @@ import 'add_product_screen.dart';
 import 'seller_profile_screen.dart';
 
 /// Screen detail produk dengan modern layout.
-class ProductDetailScreen extends StatelessWidget {
+class ProductDetailScreen extends StatefulWidget {
   final dynamic product;
   const ProductDetailScreen({super.key, required this.product});
 
   @override
+  State<ProductDetailScreen> createState() => _ProductDetailScreenState();
+}
+
+class _ProductDetailScreenState extends State<ProductDetailScreen> {
+  late dynamic _product;
+
+  @override
+  void initState() {
+    super.initState();
+    _product = widget.product;
+    _fetchLatestProductDetails();
+  }
+
+  Future<void> _fetchLatestProductDetails() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (auth.token == null) return;
+
+    try {
+      final latestProduct = await ApiService().getProduct(
+        auth.token!,
+        _product['id'],
+      );
+      if (mounted) {
+        setState(() {
+          _product = latestProduct;
+        });
+      }
+    } catch (e) {
+      // Biarkan _product memakai data sebelumnya bila gagal parsing detail
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
-    final isOwner = auth.user?.id == product['seller']?['id'];
+    final isOwner = auth.user?.id == _product['seller']?['id'];
     final images =
-        product['images'] as List<dynamic>? ??
-        (product['image_url'] != null ? [product['image_url']] : []);
+        _product['images'] as List<dynamic>? ??
+        (_product['image_url'] != null ? [_product['image_url']] : []);
 
     return Scaffold(
       backgroundColor: AppColors.backgroundPrimary,
@@ -37,7 +70,7 @@ class ProductDetailScreen extends StatelessWidget {
                   ? PageView.builder(
                       itemCount: images.length,
                       itemBuilder: (_, index) => Hero(
-                        tag: 'product_${product['id']}',
+                        tag: 'product_${_product['id']}',
                         child: Image.network(
                           images[index],
                           fit: BoxFit.cover,
@@ -80,7 +113,7 @@ class ProductDetailScreen extends StatelessWidget {
                         final result = await Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => AddProductScreen(product: product),
+                            builder: (_) => AddProductScreen(product: _product),
                           ),
                         );
                         if (result == true && context.mounted) {
@@ -120,23 +153,23 @@ class ProductDetailScreen extends StatelessWidget {
                 children: [
                   // Price
                   Text(
-                    AppFormatters.currency(product['price']),
+                    AppFormatters.currency(_product['price']),
                     style: AppTextStyles.price.copyWith(fontSize: 26),
                   ),
                   const SizedBox(height: 8),
 
                   // Title
-                  Text(product['title'] ?? '', style: AppTextStyles.h2),
+                  Text(_product['title'] ?? '', style: AppTextStyles.h2),
                   const SizedBox(height: 16),
 
                   // Tags
                   Wrap(
                     spacing: 8,
                     children: [
-                      if (product['category'] != null)
+                      if (_product['category'] != null)
                         Chip(
                           label: Text(
-                            (product['category'] as String).toUpperCase(),
+                            (_product['category'] as String).toUpperCase(),
                             style: const TextStyle(fontSize: 11),
                           ),
                           backgroundColor: AppColors.primarySurface,
@@ -144,14 +177,32 @@ class ProductDetailScreen extends StatelessWidget {
                           side: BorderSide.none,
                           visualDensity: VisualDensity.compact,
                         ),
-                      if (product['condition'] != null)
+                      if (_product['condition'] != null)
                         Chip(
                           label: Text(
-                            (product['condition'] as String).toUpperCase(),
+                            (_product['condition'] as String).toUpperCase(),
                             style: const TextStyle(fontSize: 11),
                           ),
                           backgroundColor: AppColors.accentSurface,
                           labelStyle: const TextStyle(color: AppColors.accent),
+                          side: BorderSide.none,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      if (_product['views_count'] != null)
+                        Chip(
+                          avatar: const Icon(
+                            Icons.visibility_outlined,
+                            size: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                          label: Text(
+                            'Dilihat oleh ${_product['views_count']} orang',
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                          backgroundColor: AppColors.backgroundSecondary,
+                          labelStyle: const TextStyle(
+                            color: AppColors.textSecondary,
+                          ),
                           side: BorderSide.none,
                           visualDensity: VisualDensity.compact,
                         ),
@@ -160,7 +211,7 @@ class ProductDetailScreen extends StatelessWidget {
                   const SizedBox(height: 24),
 
                   // Seller
-                  if (product['seller'] != null) ...[
+                  if (_product['seller'] != null) ...[
                     Text(
                       'Penjual',
                       style: AppTextStyles.labelMedium.copyWith(
@@ -173,7 +224,7 @@ class ProductDetailScreen extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder: (_) => SellerProfileScreen(
-                            sellerId: product['seller']['id'],
+                            sellerId: _product['seller']['id'],
                           ),
                         ),
                       ),
@@ -190,7 +241,7 @@ class ProductDetailScreen extends StatelessWidget {
                               radius: 22,
                               backgroundColor: AppColors.primarySurface,
                               child: Text(
-                                (product['seller']['username'] ?? '?')[0]
+                                (_product['seller']['username'] ?? '?')[0]
                                     .toUpperCase(),
                                 style: const TextStyle(
                                   color: AppColors.primary,
@@ -205,14 +256,14 @@ class ProductDetailScreen extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    product['seller']['full_name'] ??
-                                        product['seller']['username'] ??
+                                    _product['seller']['full_name'] ??
+                                        _product['seller']['username'] ??
                                         '',
                                     style: AppTextStyles.labelMedium,
                                   ),
-                                  if (product['seller']['city'] != null)
+                                  if (_product['seller']['city'] != null)
                                     Text(
-                                      product['seller']['city'],
+                                      _product['seller']['city'],
                                       style: AppTextStyles.bodySmall,
                                     ),
                                 ],
@@ -245,7 +296,7 @@ class ProductDetailScreen extends StatelessWidget {
                       border: Border.all(color: AppColors.borderLight),
                     ),
                     child: Text(
-                      product['description'] ?? 'Tidak ada deskripsi.',
+                      _product['description'] ?? 'Tidak ada deskripsi.',
                       style: AppTextStyles.bodyLarge.copyWith(height: 1.6),
                     ),
                   ),
@@ -286,7 +337,7 @@ class ProductDetailScreen extends StatelessWidget {
     final chat = Provider.of<ChatProvider>(context, listen: false);
     if (auth.token == null || auth.user == null) return;
 
-    final sellerId = product['seller']?['id'];
+    final sellerId = _product['seller']?['id'];
     if (sellerId == null) return;
 
     final success = await chat.startChat(auth.token!, sellerId, auth.user!.id);
@@ -296,13 +347,13 @@ class ProductDetailScreen extends StatelessWidget {
         MaterialPageRoute(
           builder: (_) => ChatScreen(
             targetUserId: sellerId,
-            roomName: product['seller']['username'] ?? 'Penjual',
+            roomName: _product['seller']['username'] ?? 'Penjual',
             roomId: chat.currentRoomId!,
             productContext: {
-              'id': product['id'],
-              'title': product['title'],
-              'price': product['price'],
-              'image_url': product['image_url'],
+              'id': _product['id'],
+              'title': _product['title'],
+              'price': _product['price'],
+              'image_url': _product['image_url'],
             },
           ),
         ),
@@ -329,7 +380,7 @@ class ProductDetailScreen extends StatelessWidget {
               final auth = Provider.of<AuthProvider>(context, listen: false);
               if (auth.token == null) return;
               try {
-                await ApiService().deleteProduct(auth.token!, product['id']);
+                await ApiService().deleteProduct(auth.token!, _product['id']);
                 if (context.mounted) Navigator.pop(context, true);
               } catch (_) {}
             },

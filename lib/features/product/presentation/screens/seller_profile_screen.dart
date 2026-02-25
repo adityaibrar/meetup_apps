@@ -65,6 +65,24 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
     final province = _profile?['province'];
     final double averageRating = _profile?['average_rating']?.toDouble() ?? 0.0;
     final int totalReviews = _profile?['total_reviews'] ?? 0;
+    final String tier = _profile?['tier'] ?? 'bronze';
+    final bool isTrusted = _profile?['is_trusted'] ?? false;
+
+    // Dynamic Tier Color
+    Color tierColor;
+    switch (tier.toLowerCase()) {
+      case 'platinum':
+        tierColor = const Color(0xFFE5E4E2); // Platinum
+        break;
+      case 'gold':
+        tierColor = const Color(0xFFFFD700); // Gold
+        break;
+      case 'silver':
+        tierColor = const Color(0xFFC0C0C0); // Silver
+        break;
+      default:
+        tierColor = const Color(0xFFCD7F32); // Bronze
+    }
 
     return Scaffold(
       body: CustomScrollView(
@@ -82,65 +100,68 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const SizedBox(height: 50),
-                    CircleAvatar(
-                      radius: 48,
-                      backgroundColor: Colors.white.withValues(alpha: 0.3),
-                      child: Text(
-                        username.isNotEmpty ? username[0].toUpperCase() : '?',
-                        style: const TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      fullName,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    if (username.isNotEmpty && username != fullName)
-                      Text(
-                        '@$username',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white.withValues(alpha: 0.7),
-                        ),
-                      ),
-                    const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 4,
-                      ),
+                      padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.star_rounded,
-                            color: Colors.amber,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '$averageRating ($totalReviews Ulasan)',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: tierColor, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: tierColor.withValues(alpha: 0.4),
+                            blurRadius: 10,
+                            spreadRadius: 1,
                           ),
                         ],
                       ),
+                      child: CircleAvatar(
+                        radius: 44,
+                        backgroundColor: Colors.white.withValues(alpha: 0.3),
+                        child: Text(
+                          username.isNotEmpty ? username[0].toUpperCase() : '?',
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
                     ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          fullName,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        if (isTrusted) ...[
+                          const SizedBox(width: 6),
+                          const Tooltip(
+                            message: 'Trusted User',
+                            child: Icon(
+                              Icons.verified,
+                              color: Colors.blue,
+                              size: 20,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    if (username.isNotEmpty && username != fullName)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          '@$username',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.white.withValues(alpha: 0.8),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -148,70 +169,196 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
           ),
           SliverToBoxAdapter(
             child: Transform.translate(
-              offset: const Offset(0, -24),
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: AppColors.backgroundPrimary,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-                ),
-                padding: const EdgeInsets.fromLTRB(24, 28, 24, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if ((city != null && city.isNotEmpty) ||
-                        (province != null && province.isNotEmpty))
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.location_on,
-                            color: AppColors.primary,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            [city, province]
-                                .where((e) => e != null && e.isNotEmpty)
-                                .join(', '),
-                            style: AppTextStyles.bodyMedium,
-                          ),
-                        ],
-                      ),
-                    if (!isMyProfile) ...[
-                      const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () => _startChat(context),
-                              icon: const Icon(
-                                Icons.chat_bubble_outline,
-                                size: 18,
+              offset: const Offset(0, -30),
+              child: Column(
+                children: [
+                  // Floating Bento Info Card
+                  const SizedBox(height: 50),
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 24),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.star_rounded,
+                                    color: Colors.amber,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '$averageRating ($totalReviews)',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              label: const Text('Chat'),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(
-                                  color: AppColors.primary,
+                              const SizedBox(height: 8),
+                              if ((city != null && city.isNotEmpty) ||
+                                  (province != null && province.isNotEmpty))
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.location_on,
+                                      color: AppColors.primary,
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        [city, province]
+                                            .where(
+                                              (e) => e != null && e.isNotEmpty,
+                                            )
+                                            .join(', '),
+                                        style: AppTextStyles.bodySmall.copyWith(
+                                          color: AppColors.textSecondary,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                foregroundColor: AppColors.primary,
-                              ),
-                              onPressed: () => _showRatingBottomSheet(context),
-                              icon: const Icon(Icons.star_border, size: 18),
-                              label: const Text('Beri Nilai'),
-                            ),
+                            ],
                           ),
-                        ],
+                        ),
+                        Container(
+                          height: 40,
+                          width: 1,
+                          color: AppColors.divider,
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              tier.toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: tierColor == const Color(0xFFE5E4E2)
+                                    ? Colors
+                                          .blueGrey // Contrast for Platinum
+                                    : tierColor,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Status Tier',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.textTertiary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Actions & Products Container
+                  Container(
+                    decoration: const BoxDecoration(
+                      color: AppColors.backgroundPrimary,
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(32),
                       ),
-                    ],
-                    const SizedBox(height: 24),
-                    Text('Produk yang Dijual', style: AppTextStyles.h3),
-                    const SizedBox(height: 16),
-                  ],
-                ),
+                    ),
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (!isMyProfile) ...[
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _startChat(context),
+                                  icon: const Icon(
+                                    Icons.chat_bubble_rounded,
+                                    size: 20,
+                                  ),
+                                  label: const Text(
+                                    'Chat Penjual',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    elevation: 2,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () =>
+                                      _showRatingBottomSheet(context),
+                                  icon: const Icon(
+                                    Icons.star_border_rounded,
+                                    size: 20,
+                                  ),
+                                  label: const Text(
+                                    'Beri Nilai',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                    side: const BorderSide(
+                                      color: AppColors.primary,
+                                      width: 1.5,
+                                    ),
+                                    foregroundColor: AppColors.primary,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 32),
+                        ],
+                        Text('Produk yang Dijual', style: AppTextStyles.h3),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

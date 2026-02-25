@@ -285,6 +285,21 @@ class ApiService {
     throw Exception('Gagal memuat produk');
   }
 
+  Future<dynamic> getProduct(String token, int productId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/products/$productId'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return data['data'];
+    }
+    throw Exception('Gagal memuat detail produk');
+  }
+
   Future<List<dynamic>> getMyProducts(String token) async {
     final response = await http.get(
       Uri.parse('$baseUrl/my-products'),

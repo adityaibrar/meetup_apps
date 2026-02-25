@@ -14,6 +14,8 @@ class UserModel extends User {
     super.province,
     super.averageRating = 0.0,
     super.totalReviews = 0,
+    super.tier = 'bronze',
+    super.isTrusted = false,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -31,6 +33,8 @@ class UserModel extends User {
           ? double.tryParse(json['average_rating'].toString()) ?? 0.0
           : 0.0,
       totalReviews: json['total_reviews'] ?? 0,
+      tier: json['tier'] ?? 'bronze',
+      isTrusted: json['is_trusted'] ?? false,
     );
   }
 
@@ -46,5 +50,7 @@ class UserModel extends User {
     'province': province,
     'average_rating': averageRating,
     'total_reviews': totalReviews,
+    'tier': tier,
+    'is_trusted': isTrusted,
   };
 }
