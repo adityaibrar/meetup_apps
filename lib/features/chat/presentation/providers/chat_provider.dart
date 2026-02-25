@@ -252,6 +252,10 @@ class ChatProvider extends ChangeNotifier {
           _activeRoomPublicKey =
               data['target_public_key']; // Capture Public Key
 
+          // Clear any stale meetup states
+          _meetupReadyUserIds.clear();
+          _meetupConfirmed = false;
+
           // Load local messages first
           await _loadLocalMessages(_activeRoomId!, myUserId);
 
@@ -332,6 +336,12 @@ class ChatProvider extends ChangeNotifier {
             _userStatus[userId] = isOnline;
           }
           log('Room status loaded: ${_roomStatus[roomId]}');
+        }
+
+        final readyIds = data['ready_user_ids'] as List?;
+        if (readyIds != null && _activeRoomId == roomId) {
+          _meetupReadyUserIds = List<int>.from(readyIds);
+          notifyListeners();
         }
       },
     );
@@ -699,6 +709,13 @@ class ChatProvider extends ChangeNotifier {
         _meetupReadyUserIds = readyUserIDs;
         notifyListeners();
       }
+      _updateChatListForMeetup(
+        roomId,
+        readyUserIDs.isNotEmpty
+            ? 'Ajakan Meetup 🤝'
+            : 'Membatalkan Ajakan Meetup',
+        readyUserIDs.contains(myUserId),
+      );
     } else if (msg['type'] == 'meetup_confirmed') {
       final roomId = msg['chat_room_id'] as int;
       if (_activeRoomId == roomId) {
@@ -706,6 +723,32 @@ class ChatProvider extends ChangeNotifier {
         _meetupReadyUserIds.clear();
         notifyListeners();
       }
+      _updateChatListForMeetup(roomId, 'Meetup telah disepakati 🎉', false);
+    }
+  }
+
+  void _updateChatListForMeetup(
+    int roomId,
+    String messageContent,
+    bool isMeAction,
+  ) {
+    final chatIndex = _myChats.indexWhere((c) => c['id'] == roomId);
+    if (chatIndex != -1) {
+      var chat = _myChats[chatIndex];
+      chat['last_message'] = messageContent;
+      chat['last_message_at'] = DateTime.now().toIso8601String();
+
+      if (_activeRoomId != roomId && !isMeAction) {
+        int currentCount = 0;
+        if (chat['unread_count'] != null) {
+          currentCount = chat['unread_count'] as int;
+        }
+        chat['unread_count'] = currentCount + 1;
+      }
+
+      _myChats.removeAt(chatIndex);
+      _myChats.insert(0, chat);
+      notifyListeners();
     }
   }
 

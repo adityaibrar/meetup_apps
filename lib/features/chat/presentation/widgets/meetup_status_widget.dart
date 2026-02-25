@@ -62,9 +62,18 @@ class MeetupStatusWidget extends StatelessWidget {
                   )
                 else ...[
                   Text(
-                    isMeReady ? 'Menunggu partner...' : 'Siap bertemu?',
+                    isMeReady
+                        ? 'Menunggu partner...'
+                        : (isTargetReady
+                              ? '${targetUserName ?? 'Partner'} mengajak bertemu!'
+                              : 'Siap bertemu?'),
                     style: TextStyle(
-                      color: AppColors.textTertiary,
+                      color: isTargetReady
+                          ? AppColors.primary
+                          : AppColors.textTertiary,
+                      fontWeight: isTargetReady
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                       fontSize: 12,
                     ),
                     textAlign: TextAlign.center,
@@ -79,12 +88,32 @@ class MeetupStatusWidget extends StatelessWidget {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        gradient: isMeReady ? null : AppColors.primaryGradient,
+                        gradient: isMeReady
+                            ? null
+                            : (isTargetReady
+                                  ? const LinearGradient(
+                                      colors: [AppColors.success, Colors.green],
+                                    )
+                                  : AppColors.primaryGradient),
                         color: isMeReady ? AppColors.surfaceVariant : null,
                         borderRadius: BorderRadius.circular(20),
+                        boxShadow: isTargetReady && !isMeReady
+                            ? [
+                                BoxShadow(
+                                  color: AppColors.success.withValues(
+                                    alpha: 0.3,
+                                  ),
+                                  blurRadius: 8,
+                                  spreadRadius: 1,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
                       ),
                       child: Text(
-                        isMeReady ? 'READY ✓' : "I'M READY",
+                        isMeReady
+                            ? 'READY ✓'
+                            : (isTargetReady ? 'TERIMA AJAKAN' : "I'M READY"),
                         style: TextStyle(
                           color: isMeReady
                               ? AppColors.textTertiary
